@@ -1,5 +1,7 @@
+/* eslint-disable linebreak-style */
+/* eslint-disable one-var */
 /**
- * @license
+ * * @license
  * Copyright 2020 Google LLC. All Rights Reserved.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -48,7 +50,7 @@ function drawPath(ctx, points, closePath) {
 }
 
 let model, ctx, videoWidth, videoHeight, video, canvas,
-    scatterGLHasInitialized = false, scatterGL;
+    scatterGLHasInitialized = false, scatterGL, frame = 0;
 
 const VIDEO_SIZE = 500;
 const mobile = isMobile();
@@ -59,7 +61,7 @@ const stats = new Stats();
 const state = {
   backend: 'wasm',
   maxFaces: 1,
-  triangulateMesh: true
+  triangulateMesh: true,
 };
 
 if (renderPointcloud) {
@@ -69,18 +71,18 @@ if (renderPointcloud) {
 function setupDatGui() {
   const gui = new dat.GUI();
   gui.add(state, 'backend', ['wasm', 'webgl', 'cpu'])
-      .onChange(async backend => {
+      .onChange(async (backend) => {
         await tf.setBackend(backend);
       });
 
-  gui.add(state, 'maxFaces', 1, 20, 1).onChange(async val => {
+  gui.add(state, 'maxFaces', 1, 20, 1).onChange(async (val) => {
     model = await facemesh.load({maxFaces: val});
   });
 
   gui.add(state, 'triangulateMesh');
 
   if (renderPointcloud) {
-    gui.add(state, 'renderPointcloud').onChange(render => {
+    gui.add(state, 'renderPointcloud').onChange((render) => {
       document.querySelector('#scatter-gl-container').style.display =
           render ? 'inline-block' : 'none';
     });
@@ -97,7 +99,7 @@ async function setupCamera() {
       // Only setting the video to a specified size in order to accommodate a
       // point cloud, so on mobile devices accept the default size.
       width: mobile ? undefined : VIDEO_SIZE,
-      height: mobile ? undefined : VIDEO_SIZE
+      height: mobile ? undefined : VIDEO_SIZE,
     },
   });
   video.srcObject = stream;
@@ -117,15 +119,22 @@ async function renderPrediction() {
       video, 0, 0, videoWidth, videoHeight, 0, 0, canvas.width, canvas.height);
 
   if (predictions.length > 0) {
-    predictions.forEach(prediction => {
+    predictions.forEach((prediction) => {
       const keypoints = prediction.scaledMesh;
+
+      // if (frame % 100 == 0) {
+        let eyew = keypoints[362][0] - keypoints[263][0], eyeh = keypoints[374][1] - keypoints[386][1];
+        // console.log(eyew + ' ' + eyeh);
+        ctx.rect(keypoints[263][0] - eyew / 3, keypoints[386][1] - eyeh / 3, eyew * 3 / 2, eyew * -9 / 10);
+        ctx.stroke();
+      // }
 
       if (state.triangulateMesh) {
         for (let i = 0; i < TRIANGULATION.length / 3; i++) {
           const points = [
             TRIANGULATION[i * 3], TRIANGULATION[i * 3 + 1],
-            TRIANGULATION[i * 3 + 2]
-          ].map(index => keypoints[index]);
+            TRIANGULATION[i * 3 + 2],
+          ].map((index) => keypoints[index]);
 
           drawPath(ctx, points, true);
         }
@@ -142,9 +151,9 @@ async function renderPrediction() {
     });
 
     if (renderPointcloud && state.renderPointcloud && scatterGL != null) {
-      const pointsData = predictions.map(prediction => {
+      const pointsData = predictions.map((prediction) => {
         let scaledMesh = prediction.scaledMesh;
-        return scaledMesh.map(point => ([-point[0], -point[1], -point[2]]));
+        return scaledMesh.map((point) => ([-point[0], -point[1], -point[2]]));
       });
 
       let flattenedPointsData = [];
@@ -162,6 +171,8 @@ async function renderPrediction() {
     }
   }
 
+  frame++;
+
   stats.end();
   requestAnimationFrame(renderPrediction);
 };
@@ -170,7 +181,7 @@ async function main() {
   await tf.setBackend(state.backend);
   setupDatGui();
 
-  stats.showPanel(0);  // 0: fps, 1: ms, 2: mb, 3+: custom
+  stats.showPanel(0); // 0: fps, 1: ms, 2: mb, 3+: custom
   document.getElementById('main').appendChild(stats.dom);
 
   await setupCamera();
