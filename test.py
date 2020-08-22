@@ -1,44 +1,60 @@
 import torch
 import torchvision
 import torchvision.transforms as transforms
+import torch.nn as nn
+import torch.nn.functional as F
+from matplotlib import image
 import matplotlib.pyplot as plt
-from train import Net
+import numpy as np
+from PIL import Image
 
-if __name__ == '__main__':
-    torch.multiprocessing.freeze_support()
+classes = ('left', 'right', 'up', 'down', 'center')
+classes_dict = {'left':0, 'right':1, 'up':2, 'down':3, 'center':4}
 
-    transform = transforms.Compose(
-        [transforms.ToTensor(),
-        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
-    testset = torchvision.datasets.CIFAR10(root='./data', train=False, download=True, transform=transform)
-    testloader = torch.utils.data.DataLoader(testset, batch_size=4, shuffle=False, num_workers=2)
+# define NN
+class Net(nn.Module):
+    def __init__(self):
+        super(Net, self).__init__()
+        self.conv1 = nn.Conv2d(1, 32, 7, padding=3) # change 1 to 3 channels?
+        self.pool = nn.MaxPool2d(2, 2)
+        self.conv2 = nn.Conv2d(32, 32, 5, padding=2)
+        self.conv3 = nn.Conv2d(32, 64, 3, padding=1)
+        self.fc1 = nn.Linear(64 * 4 * 7, 150)
+        self.fc2 = nn.Linear(150, 80)
+        self.fc3 = nn.Linear(80, 5) # output layer
 
-    classes = ('plane', 'car', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
-    PATH = './eyelang/cifar_net.pth'
-    # test the NN on test data
-    # re-load saved model
-    net = Net()
-    net.load_state_dict(torch.load(PATH))
+    def forward(self, x):
+        x = self.pool(F.relu(self.conv1(x.float())))
+        x = self.pool(F.relu(self.conv2(x)))
+        x = self.pool(F.relu(self.conv3(x)))
+        x = x.view(-1, self.num_flat_features(x))
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        x = self.fc3(x) # output layer
+        return x
+    
+    def num_flat_features(self, x):
+        size = x.size()[1:] # all dimensions except the batch dimension
+        num_features = 1
+        for s in size:
+            num_features *= s
+        return num_features
 
-    dataiter = iter(testloader)
-    images, labels = dataiter.next()
+net = Net()
+net.load_state_dict(torch.load('eyelang\\models\\eye-gaze_net_0.pth'))
+transform = transforms.Compose([transforms.Resize((36, 60)), transforms.Grayscale(), transforms.ToTensor()])
 
-    # print images
-    # permute to have channels as last dimension
-    plt.imshow(torchvision.utils.make_grid(images).permute(1, 2, 0))
-    plt.show()
-    print('GroundTruth: ', ' '.join('%5s' % classes[labels[j]] for j in range(4)))
-    outputs = net(images) # neural net's classifications
-    _, predicted = torch.max(outputs, 1) # get highest energy/most likely label
-    print('Predicted: ', ' '.join('%5s' % classes[predicted[j]] for j in range(4)))
+fig = plt.figure(figsize=(15, 5))
+for i in range(5):
+    input = Image.open('eyelang\\cindy-eye\\cindy-%d.jpg' % (i))
+    input = transform(input).numpy()
+    input = (input - input.min()) / (input.max() - input.min()) * 255
+    input = np.array([input])
 
-    correct = 0
-    total = 0
-    with torch.no_grad():
-        for data in testloader:
-            images, labels = data
-            outputs = net(images)
-            _, predicted = torch.max(outputs.data, 1)
-            total += labels.size(0)
-            correct += (predicted == labels).sum().item()
-    print('Accuracy of the network on the 10000 test images: %d %%' % (100 * correct / total))
+    output = net(torch.from_numpy(input))
+    _, predicted = torch.max(output.data, 1)
+
+    fig.add_subplot(1, 5, i + 1)
+    plt.imshow(input[0][0])
+    print(classes[predicted[0]])
+plt.show()
