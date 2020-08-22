@@ -78561,9 +78561,9 @@ const webgl = {
 };
 exports.webgl = webgl;
 },{"@tensorflow/tfjs-core":"node_modules/@tensorflow/tfjs-core/dist/index.js","./backend_webgl":"node_modules/@tensorflow/tfjs-backend-webgl/dist/backend_webgl.js","./version":"node_modules/@tensorflow/tfjs-core/dist/version.js","./register_all_kernels":"node_modules/@tensorflow/tfjs-backend-webgl/dist/register_all_kernels.js","./webgl":"node_modules/@tensorflow/tfjs-backend-webgl/dist/webgl.js"}],"node_modules/@tensorflow/tfjs-backend-wasm/dist/tf-backend-wasm.esm.js":[function(require,module,exports) {
-var __filename = "C:\\Users\\Alex\\Desktop\\facemesh_demo\\demo\\node_modules\\@tensorflow\\tfjs-backend-wasm\\dist\\tf-backend-wasm.esm.js";
+var __filename = "C:\\Users\\zhouc\\vscode-workspace\\eyelang\\facemesh\\demo\\node_modules\\@tensorflow\\tfjs-backend-wasm\\dist\\tf-backend-wasm.esm.js";
 var process = require("process");
-var __dirname = "C:\\Users\\Alex\\Desktop\\facemesh_demo\\demo\\node_modules\\@tensorflow\\tfjs-backend-wasm\\dist";
+var __dirname = "C:\\Users\\zhouc\\vscode-workspace\\eyelang\\facemesh\\demo\\node_modules\\@tensorflow\\tfjs-backend-wasm\\dist";
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -81855,8 +81855,12 @@ function _getRequireWildcardCache() { if (typeof WeakMap !== "function") return 
 
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } if (obj === null || typeof obj !== "object" && typeof obj !== "function") { return { default: obj }; } var cache = _getRequireWildcardCache(); if (cache && cache.has(obj)) { return cache.get(obj); } var newObj = {}; var hasPropertyDescriptor = Object.defineProperty && Object.getOwnPropertyDescriptor; for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) { var desc = hasPropertyDescriptor ? Object.getOwnPropertyDescriptor(obj, key) : null; if (desc && (desc.get || desc.set)) { Object.defineProperty(newObj, key, desc); } else { newObj[key] = obj[key]; } } } newObj.default = obj; if (cache) { cache.set(obj, newObj); } return newObj; }
 
+/* eslint-disable linebreak-style */
+
+/* eslint-disable one-var */
+
 /**
- * @license
+ * * @license
  * Copyright 2020 Google LLC. All Rights Reserved.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -81902,7 +81906,8 @@ let model,
     video,
     canvas,
     scatterGLHasInitialized = false,
-    scatterGL;
+    scatterGL,
+    frame = 0;
 const VIDEO_SIZE = 500;
 const mobile = isMobile(); // Don't render the point cloud on mobile in order to maximize performance and
 // to avoid crowding limited screen space.
@@ -81966,6 +81971,33 @@ async function renderPrediction() {
   if (predictions.length > 0) {
     predictions.forEach(prediction => {
       const keypoints = prediction.scaledMesh;
+      const URL = 'http://localhost:5000/';
+      let eyew = keypoints[362][0] - keypoints[263][0],
+          eyeh = keypoints[374][1] - keypoints[386][1];
+
+      if (frame % 2 == 0) {
+        let imageData = ctx.getImageData(canvas.width - (keypoints[263][0] - eyew / 3 + eyew * 3 / 2), keypoints[386][1] - eyeh / 2, eyew * 3 / 2, eyew * -9 / 10);
+        const files = {
+          'file': imageData
+        }; // show imageData on the canvas
+        // ctx.putImageData(files['file'], 100, 100);
+        // if (frame == 10) {
+        // console.log(imageData);
+        // }
+
+        $.post(URL, files, function (data, status) {
+          console.log(data.class); // ctx.font = "20px Arial";
+          // ctx.fillText(data.class, 100, 50);
+          // ctx.fill();
+        });
+      } // draw box around eye
+      // if (frame % 100 == 0) {
+      // let eyew = keypoints[362][0] - keypoints[263][0], eyeh = keypoints[374][1] - keypoints[386][1];
+      // console.log(eyew + ' ' + eyeh);
+      // ctx.rect(keypoints[263][0] - eyew / 3, keypoints[386][1] - eyeh / 2, eyew * 3 / 2, eyew * -9 / 10);
+      // ctx.stroke();
+      // }
+
 
       if (state.triangulateMesh) {
         for (let i = 0; i < _triangulation.TRIANGULATION.length / 3; i++) {
@@ -82008,6 +82040,7 @@ async function renderPrediction() {
     }
   }
 
+  frame++;
   stats.end();
   requestAnimationFrame(renderPrediction);
 }
