@@ -69,6 +69,11 @@ def transform_image(image_bytes, height):
     input = Image.fromarray(np.reshape(np.array(image_bytes), (height, -1)))
     input = transform(input).numpy()
     input = (input - input.min()) / (input.max() - input.min()) * 255
+    # download = Image.fromarray(input[0])
+    # download = download.convert('L')
+    # download.save('cindy-eye\\cindy-5.jpg')
+    # plt.imshow(input[0])
+    # plt.show()
     input = np.array([input])
     input.setflags(write=True)
     input = torch.from_numpy(input)    

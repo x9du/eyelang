@@ -56,7 +56,7 @@ const VIDEO_SIZE = 500;
 const mobile = isMobile();
 // Don't render the point cloud on mobile in order to maximize performance and
 // to avoid crowding limited screen space.
-const renderPointcloud = mobile === false;
+const renderPointcloud = /* mobile === */ false;
 const stats = new Stats();
 const state = {
   backend: 'wasm',
@@ -98,8 +98,8 @@ async function setupCamera() {
       facingMode: 'user',
       // Only setting the video to a specified size in order to accommodate a
       // point cloud, so on mobile devices accept the default size.
-      width: mobile ? undefined : VIDEO_SIZE,
-      height: mobile ? undefined : VIDEO_SIZE,
+      // width: mobile ? undefined : VIDEO_SIZE,
+      // height: mobile ? undefined : VIDEO_SIZE,
     },
   });
   video.srcObject = stream;
@@ -110,6 +110,10 @@ async function setupCamera() {
     };
   });
 }
+
+const URL = 'http://localhost:5000/';
+const demo = 'ellipse';
+let circleX = 100, circleY = 100, circleV = 10;
 
 async function renderPrediction() {
   stats.begin();
@@ -122,26 +126,39 @@ async function renderPrediction() {
     predictions.forEach((prediction) => {
       const keypoints = prediction.scaledMesh;
 
-      const URL = 'http://localhost:5000/';
       let eyew = keypoints[362][0] - keypoints[263][0], eyeh = keypoints[374][1] - keypoints[386][1];
-      if (frame % 2 == 0) {
+      if (frame % 10 == 0) {
         let imageData = ctx.getImageData(canvas.width - (keypoints[263][0] - eyew / 3 + eyew * 3 / 2), keypoints[386][1] - eyeh / 2, eyew * 3 / 2, eyew * -9 / 10);
         
         const files = {
           'file': imageData,
         };
+      
+        $.post(URL, files, function(data, status) {
+          console.log(data.class);
+          if (demo == 'ellipse') {
+            if (data.class == 'left') {
+              circleX += circleV;
+            } else if (data.class == 'right') {
+              circleX -= circleV;
+            } else if (data.class == 'up') {
+              circleY -= circleV;
+            } else if (data.class == 'down') {
+              circleY += circleV;
+            }
+          }
+        });
+
         // show imageData on the canvas
         // ctx.putImageData(files['file'], 100, 100);
         // if (frame == 10) {
           // console.log(imageData);
         // }
-
-        $.post(URL, files, function(data, status) {
-          console.log(data.class);
-          // ctx.font = "20px Arial";
-          // ctx.fillText(data.class, 100, 50);
-          // ctx.fill();
-        });
+      }
+      if (demo == 'ellipse') {
+        ctx.beginPath();
+        ctx.ellipse(circleX, circleY, 10, 10, 0, 0, 2 * Math.PI);
+        ctx.fill();
       }
 
       // draw box around eye
@@ -152,25 +169,25 @@ async function renderPrediction() {
         // ctx.stroke();
       // }
 
-      if (state.triangulateMesh) {
-        for (let i = 0; i < TRIANGULATION.length / 3; i++) {
-          const points = [
-            TRIANGULATION[i * 3], TRIANGULATION[i * 3 + 1],
-            TRIANGULATION[i * 3 + 2],
-          ].map((index) => keypoints[index]);
+      // if (state.triangulateMesh) {
+      //   for (let i = 0; i < TRIANGULATION.length / 3; i++) {
+      //     const points = [
+      //       TRIANGULATION[i * 3], TRIANGULATION[i * 3 + 1],
+      //       TRIANGULATION[i * 3 + 2],
+      //     ].map((index) => keypoints[index]);
 
-          drawPath(ctx, points, true);
-        }
-      } else {
-        for (let i = 0; i < keypoints.length; i++) {
-          const x = keypoints[i][0];
-          const y = keypoints[i][1];
+      //     drawPath(ctx, points, true);
+      //   }
+      // } else {
+      //   for (let i = 0; i < keypoints.length; i++) {
+      //     const x = keypoints[i][0];
+      //     const y = keypoints[i][1];
 
-          ctx.beginPath();
-          ctx.arc(x, y, 1 /* radius */, 0, 2 * Math.PI);
-          ctx.fill();
-        }
-      }
+      //     ctx.beginPath();
+      //     ctx.arc(x, y, 1 /* radius */, 0, 2 * Math.PI);
+      //     ctx.fill();
+      //   }
+      // }
     });
 
     if (renderPointcloud && state.renderPointcloud && scatterGL != null) {
@@ -239,5 +256,12 @@ async function main() {
         {'rotateOnStart': false, 'selectEnabled': false});
   }
 };
+
+document.addEventListener('keydown', (event) => {
+  if (event.keyCode === 38) { // up
+    console.log('key up');
+    circleY -= circleV;
+  }
+});
 
 main();
