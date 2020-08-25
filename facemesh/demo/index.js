@@ -114,6 +114,46 @@ async function setupCamera() {
 const URL = 'http://localhost:5000/';
 const demo = 'ellipse';
 let circleX = 100, circleY = 100, circleV = 10;
+let cipher = {'left right left': 'a',
+  'left right down': 'b',
+  'left right center': 'c',
+  'left down left': 'd',
+  'left down right': 'e',
+  'left down center': 'f',
+  'left center left': 'g',
+  'left center right': 'h',
+  'left center down': 'i',
+  'right left right': 'j',
+  'right left down': 'k',
+  'right left center': 'l',
+  'right down left': 'm',
+  'right down right': 'n',
+  'right down center': 'o',
+  'right center left': 'p',
+  'right center right': 'q',
+  'right center down': 'r',
+  'down left right': 's',
+  'down left down': 't',
+  'down left center': 'u',
+  'down right left': 'v',
+  'down right down': 'w',
+  'down right center': 'x',
+  'down center left': 'y',
+  'down center right': 'z',
+  'down center down': ' ',
+  /* center left right
+  center left down
+  center left center
+  center right left
+  center right down
+  center right center
+  center down left
+  center down right
+  center down center*/
+};
+let cipherText = [];
+let prevClass = '';
+let modal = document.getElementById('options-demo');
 
 async function renderPrediction() {
   stats.begin();
@@ -146,7 +186,25 @@ async function renderPrediction() {
             } else if (data.class == 'down') {
               circleY += circleV;
             }
+          } else if (demo == 'text' && data.class != prevClass) {
+            if (cipherText.length < 3) {
+              cipherText.push(data.class);
+            } else {
+              if (cipher.hasOwnProperty(cipherText.join(' '))) {
+                document.getElementById('text-demo').innerHTML += cipher[cipherText.join(' ')];
+                // console.log(cipher[cipherText.join(' ')]);
+              }
+              cipherText = [];
+            }
+          } else if (demo == 'options') {
+            if (data.class == 'left') {
+              document.getElementById('text-demo').innerHTML = '        _\n(___()\'\`;\n/,     /\`\n\\\\"--\\\\';
+              modal.style.display = 'none';
+            } else if (data.class == 'right') {
+              modal.style.display = 'none';
+            }
           }
+          prevClass = data.class;
         });
 
         // show imageData on the canvas
